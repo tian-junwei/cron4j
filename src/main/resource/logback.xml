@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration scan="true" scanPeriod="60 seconds" debug="false">
+    <jmxConfigurator />
+    
+    <!-- 控制台输出日志 -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50}[%line] - %msg%n</pattern>
+        </layout>
+    </appender>
+  
+    <!-- 文件输出日志 (文件大小策略进行文件输出，超过指定大小对文件备份)-->
+    <appender name="FILE-debug" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>DEBUG</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY </onMismatch>
+        </filter>        
+        <File>c:\\log\debug.log</File>        
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>c:\\log\debug.%d{yyyy-MM-dd}.%i.zip</FileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>1MB</maxFileSize>
+                <MaxHistory>3</MaxHistory>
+              </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>    
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50}[%line] - %msg%n</Pattern>
+        </layout>
+    </appender>    
+    
+    <appender name="FILE-error" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY </onMismatch>
+        </filter>
+        <File>c:\\log\error.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>c:\\log\error.%d{yyyy-MM-dd}.%i.zip</FileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+               <maxFileSize>10MB</maxFileSize>
+               <MaxHistory>3</MaxHistory>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50}[%line] - %msg%n</Pattern>
+        </layout>
+    </appender>
+  
+    <appender name="FILE-info" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY </onMismatch>
+        </filter>
+        <File>c:\\log\info.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>c:\\log\info.%d{yyyy-MM-dd}.%i.zip</FileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>10MB</maxFileSize>
+                <MaxHistory>3</MaxHistory>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50}[%line] - %msg%n</Pattern>
+        </layout>
+    </appender>
+      
+    <logger name="org.springframework"  level="ERROR" />  
+    <logger name="org.hibernate"  level="ERROR" />  
+    <logger name="net.sf.json" level="ERROR" />  
+    <logger name="org.apache" level="WARN" />  
+    <logger name="org.springframework" level="ERROR" />
+    <logger name="org.hibernate" level="ERROR" />
+    <logger name="net.sf.json" level="ERROR" />
+    <logger name="org.apache" level="WARN" />
+    <logger name="net.rubyeye.xmemcached" level="ERROR" />
+    <logger name="com.google.code.yanf4j" level="ERROR" />
+    <logger name="org.logicalcobwebs.proxool" level="ERROR" />
+    <logger name="org.apache.commons.httpclient" level="ERROR" />
+ 
+    <!-- 日志输出级别 -->
+    <root level="DEBUG">   
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE-debug" />   
+        <appender-ref ref="FILE-error" />   
+        <appender-ref ref="FILE-info" />   
+    </root> 
+</configuration>
