@@ -82,7 +82,7 @@ class TimerThread extends Thread {
 			long before = System.currentTimeMillis();
 			sleep(millis - done);
 			long after = System.currentTimeMillis();
-			done += (after - before);
+			done += Math.abs(after - before);
 		} while (done < millis);
 	}
 
@@ -98,9 +98,13 @@ class TimerThread extends Thread {
 			long nextSecond = ((System.currentTimeMillis() / 1000) + 1) * 1000;
 			// Coffee break 'till next seconds comes!
 			long sleepTime = (nextSecond - System.currentTimeMillis());
+			//time is changed
+			if(sleepTime > 1000) {
+				continue;
+			}
 			if (sleepTime > 0) {
 				try {
-					sleep(sleepTime);
+					safeSleep(sleepTime);
 				} catch (InterruptedException e) {
 					// Must exit!
 					break;
