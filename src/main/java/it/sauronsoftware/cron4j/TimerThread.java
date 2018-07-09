@@ -93,7 +93,7 @@ class TimerThread extends Thread {
 		// What time is it?
 		long millis = System.currentTimeMillis();
 		// Calculating next minute.
-		long nextMinute = ((millis / 60000) + 1) * 60000;
+		long nextMinute = ((millis / 1000) + 1) * 1000;
 		// Work until the scheduler is started.
 		for (;;) {
 			// Coffee break 'till next minute comes!
@@ -111,7 +111,7 @@ class TimerThread extends Thread {
 			// Launching the launching thread!
 			scheduler.spawnLauncher(millis);
 			// Calculating next minute.
-			nextMinute = ((millis / 60000) + 1) * 60000;
+			nextMinute = ((millis / 1000) + 1) * 1000;
 		}
 		// Discard scheduler reference.
 		scheduler = null;

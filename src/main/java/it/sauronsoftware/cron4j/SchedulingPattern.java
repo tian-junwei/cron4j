@@ -151,6 +151,11 @@ import java.util.TimeZone;
 public class SchedulingPattern {
 
 	/**
+	 * The parser for the second values.
+	 */
+	private static final ValueParser SECONDS_VALUE_PARSER = new SecondsValueParser();
+	
+	/**
 	 * The parser for the minute values.
 	 */
 	private static final ValueParser MINUTE_VALUE_PARSER = new MinuteValueParser();
@@ -200,6 +205,11 @@ public class SchedulingPattern {
 	/**
 	 * The ValueMatcher list for the "minute" field.
 	 */
+	protected ArrayList secondsMatchers = new ArrayList();
+	
+	/**
+	 * The ValueMatcher list for the "minute" field.
+	 */
 	protected ArrayList minuteMatchers = new ArrayList();
 
 	/**
@@ -244,9 +254,18 @@ public class SchedulingPattern {
 		while (st1.hasMoreTokens()) {
 			String localPattern = st1.nextToken();
 			StringTokenizer st2 = new StringTokenizer(localPattern, " \t");
-			if (st2.countTokens() != 5) {
+			if (st2.countTokens() != 6) {
 				throw new InvalidPatternException("invalid pattern: \"" + localPattern + "\"");
 			}
+			
+			try {
+				secondsMatchers.add(buildValueMatcher(st2.nextToken(), SECONDS_VALUE_PARSER));
+			} catch (Exception e) {
+				throw new InvalidPatternException("invalid pattern \""
+						+ localPattern + "\". Error parsing minutes field: "
+						+ e.getMessage() + ".");
+			}
+			
 			try {
 				minuteMatchers.add(buildValueMatcher(st2.nextToken(), MINUTE_VALUE_PARSER));
 			} catch (Exception e) {
@@ -462,6 +481,7 @@ public class SchedulingPattern {
 		GregorianCalendar gc = new GregorianCalendar();
 		gc.setTimeInMillis(millis);
 		gc.setTimeZone(timezone);
+		int seconds = gc.get(Calendar.SECOND);
 		int minute = gc.get(Calendar.MINUTE);
 		int hour = gc.get(Calendar.HOUR_OF_DAY);
 		int dayOfMonth = gc.get(Calendar.DAY_OF_MONTH);
@@ -469,12 +489,14 @@ public class SchedulingPattern {
 		int dayOfWeek = gc.get(Calendar.DAY_OF_WEEK) - 1;
 		int year = gc.get(Calendar.YEAR);
 		for (int i = 0; i < matcherSize; i++) {
+			ValueMatcher secondsMatcher = (ValueMatcher) secondsMatchers.get(i);
 			ValueMatcher minuteMatcher = (ValueMatcher) minuteMatchers.get(i);
 			ValueMatcher hourMatcher = (ValueMatcher) hourMatchers.get(i);
 			ValueMatcher dayOfMonthMatcher = (ValueMatcher) dayOfMonthMatchers.get(i);
 			ValueMatcher monthMatcher = (ValueMatcher) monthMatchers.get(i);
 			ValueMatcher dayOfWeekMatcher = (ValueMatcher) dayOfWeekMatchers.get(i);
-			boolean eval = minuteMatcher.match(minute)
+			boolean eval = secondsMatcher.match(seconds)
+					&&minuteMatcher.match(minute)
 					&& hourMatcher.match(hour)
 					&& ((dayOfMonthMatcher instanceof DayOfMonthValueMatcher) ? ((DayOfMonthValueMatcher) dayOfMonthMatcher)
 							.match(dayOfMonth, month, gc.isLeapYear(year))
@@ -616,6 +638,20 @@ public class SchedulingPattern {
 
 	}
 
+	/**
+	 * The minutes value parser.
+	 */
+	private static class SecondsValueParser extends SimpleValueParser {
+
+		/**
+		 * Builds the value parser.
+		 */
+		public SecondsValueParser() {
+			super(0, 59);
+		}
+
+	}
+	
 	/**
 	 * The minutes value parser.
 	 */

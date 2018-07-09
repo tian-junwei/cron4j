@@ -74,7 +74,7 @@ public class Predictor {
 	public Predictor(String schedulingPattern, long start)
 			throws InvalidPatternException {
 		this.schedulingPattern = new SchedulingPattern(schedulingPattern);
-		this.time = (start / (1000 * 60)) * 1000 * 60;
+		this.time = (start / (1000 )) * 1000 ;
 	}
 
 	/**
@@ -116,7 +116,7 @@ public class Predictor {
 	 */
 	public Predictor(SchedulingPattern schedulingPattern, long start) {
 		this.schedulingPattern = schedulingPattern;
-		this.time = (start / (1000 * 60)) * 1000 * 60;
+		this.time = (start / (1000 )) * 1000 ;
 	}
 
 	/**
@@ -162,7 +162,7 @@ public class Predictor {
 	 */
 	public synchronized long nextMatchingTime() {
 		// Go a minute ahead.
-		time += 60000;
+		time += 1000;
 		// Is it matching?
 		if (schedulingPattern.match(time)) {
 			return time;
@@ -175,12 +175,14 @@ public class Predictor {
 			GregorianCalendar c = new GregorianCalendar();
 			c.setTimeInMillis(time);
 			c.setTimeZone(timeZone);
+			int seconds = c.get(Calendar.SECOND);
 			int minute = c.get(Calendar.MINUTE);
 			int hour = c.get(Calendar.HOUR_OF_DAY);
 			int dayOfMonth = c.get(Calendar.DAY_OF_MONTH);
 			int month = c.get(Calendar.MONTH);
 			int year = c.get(Calendar.YEAR);
 			// Gets the matchers.
+			ValueMatcher secondsMatcher = (ValueMatcher)  schedulingPattern.secondsMatchers.get(k);
 			ValueMatcher minuteMatcher = (ValueMatcher) schedulingPattern.minuteMatchers.get(k);
 			ValueMatcher hourMatcher = (ValueMatcher) schedulingPattern.hourMatchers.get(k);
 			ValueMatcher dayOfMonthMatcher = (ValueMatcher) schedulingPattern.dayOfMonthMatchers.get(k);
@@ -191,6 +193,17 @@ public class Predictor {
 					for (;;) { // day of month
 						for (;;) { // hour
 							for (;;) { // minutes
+								for(;;) {
+									if (secondsMatcher.match(seconds)) {
+										break;
+									} else {
+										seconds++;
+										if (seconds > 59) {
+											seconds = 0;
+											minute++;
+										}
+									}
+								}
 								if (minuteMatcher.match(minute)) {
 									break;
 								} else {
@@ -249,6 +262,7 @@ public class Predictor {
 				// Is this ok?
 				c = new GregorianCalendar();
 				c.setTimeZone(timeZone);
+				c.set(Calendar.SECOND, seconds);
 				c.set(Calendar.MINUTE, minute);
 				c.set(Calendar.HOUR_OF_DAY, hour);
 				c.set(Calendar.DAY_OF_MONTH, dayOfMonth);
@@ -285,7 +299,7 @@ public class Predictor {
 				}
 			}
 			// Seems it matches!
-			times[k] = (c.getTimeInMillis() / (1000 * 60)) * 1000 * 60;
+			times[k] = (c.getTimeInMillis() / (1000 )) * 1000;
 		}
 		// Which one?
 		long min = Long.MAX_VALUE;
