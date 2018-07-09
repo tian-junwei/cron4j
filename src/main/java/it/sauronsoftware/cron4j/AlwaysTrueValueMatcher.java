@@ -16,31 +16,20 @@
  * License version 2.1 along with this program.
  * If not, see <http://www.gnu.org/licenses/>.
  */
-package com.tianjunwei;
+package it.sauronsoftware.cron4j;
 
 /**
- * <p>
- * This kind of exception is thrown if an invalid scheduling pattern is
- * encountered by the scheduler.
- * </p>
+ * This ValueMatcher always returns true!
  * 
  * @author Carlo Pelliccia
  */
-public class InvalidPatternException extends RuntimeException {
-
-	private static final long serialVersionUID = 1L;
+class AlwaysTrueValueMatcher implements ValueMatcher {
 
 	/**
-	 * Package-reserved construction.
+	 * Always true!
 	 */
-	InvalidPatternException() {
-	}
-
-	/**
-	 * Package-reserved construction.
-	 */
-	InvalidPatternException(String message) {
-		super(message);
+	public boolean match(int value) {
+		return true;
 	}
 
 }
