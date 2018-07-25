@@ -10,7 +10,7 @@ public class TestMain {
 		Scheduler s = new Scheduler();
 		// Schedule a once-a-minute task.
 		
-		s.schedule("*/5 * * * * *", new Runnable() {
+		s.schedule("*/30 * * * * *", new Runnable() {
 					int i = 0;
 					public void run() {
 						i++;
