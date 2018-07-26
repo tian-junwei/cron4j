@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project name="cron4j" default="rel">
+
+    <condition property="revision" value="${svn.info.rev}" else="UNKNOWN">
+        <isset property="svn.info.rev" />
+    </condition>
+    <condition property="version" value="${svn.tag}" else="rv${revision}">
+        <isset property="svn.tag" />
+    </condition>
+    <condition property="target.zip.dir" value="${target.dir}" else="${basedir}">
+        <isset property="target.dir" />
+    </condition>
+    <property file="${basedir}/build.properties" />    
+
+	<target name="bin">
+		<delete dir="${cron4j.dirs.bin}" />
+		<mkdir dir="${cron4j.dirs.bin}" />
+		<javac srcdir="${cron4j.dirs.src}" destdir="${cron4j.dirs.bin}" source="1.2" target="1.2" />
+        <copy todir="${cron4j.dirs.bin}">
+            <fileset dir="${cron4j.dirs.src}">
+                <exclude name="**/*.java" />
+                <exclude name="**/package.html" />
+            </fileset>
+        </copy>
+	</target>
+
+	<target name="jar" depends="bin">
+		<jar destfile="${cron4j.files.jar}" basedir="${cron4j.dirs.bin}" compress="true" />
+	</target>
+
+	<target name="doc">
+		<delete dir="${cron4j.dirs.api}" />
+		<mkdir dir="${cron4j.dirs.api}" />
+		<javadoc sourcepath="${cron4j.dirs.src}" destdir="${cron4j.dirs.api}" doctitle="cron4j ${version}" access="protected" author="true" version="true" verbose="true">
+			<package name="it.sauronsoftware.cron4j.*" />
+		</javadoc>
+	</target>
+
+	<target name="rel" depends="bin,jar,doc">
+		<delete dir="${cron4j.dirs.tmp}" />
+		<mkdir dir="${cron4j.dirs.tmp}" />
+		<property name="cron4j.dirs.rel" value="${cron4j.dirs.tmp}/cron4j-${version}" />
+		<mkdir dir="${cron4j.dirs.rel}" />
+		<copy todir="${cron4j.dirs.rel}" verbose="true">
+			<fileset dir="${basedir}" includes="examples/**" />
+			<fileset dir="${basedir}" includes="LICENSE.txt" />
+			<fileset dir="${basedir}" includes="README.txt" />
+			<fileset dir="${basedir}" includes="CHANGELOG.txt" />
+			<fileset dir="${basedir}" includes="BUILD.txt" />
+			<fileset dir="${basedir}" includes="build.properties" />
+			<fileset dir="${basedir}" includes="build.xml" />
+			<fileset file="${cron4j.files.jar}" />
+		</copy>
+		<mkdir dir="${cron4j.dirs.rel}/src" />
+		<copy todir="${cron4j.dirs.rel}/src" verbose="true">
+			<fileset dir="${cron4j.dirs.src}" />
+		</copy>
+		<mkdir dir="${cron4j.dirs.rel}/doc" />
+		<copy todir="${cron4j.dirs.rel}/doc" verbose="true">
+			<fileset dir="${cron4j.dirs.doc}" />
+		</copy>
+		<zip destfile="${cron4j.files.rel}" basedir="${cron4j.dirs.tmp}" includes="cron4j-${version}/**" />
+		<delete dir="${cron4j.dirs.tmp}" />
+	</target>
+
+</project>

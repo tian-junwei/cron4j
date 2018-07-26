@@ -1,0 +1,576 @@
+<?xml version="1.0" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Manuale di cron4j 2.2</title>
+</head>
+<body>
+<a name="pIndex" id="pIndex"></a>
+<h1>Manuale di cron4j 2.2</h1>
+<h3>Indice</h3>
+<ol>
+	<li><a href="#p01">Per cominciare</a></li>
+	<li><a href="#p02">Scheduling pattern</a></li>
+	<li><a href="#p03">Come schedulare, deschedulare e rischedulare un task</a></li>
+	<li><a href="#p04">Come schedulare un processo di sistema</a></li>
+	<li><a href="#p05">Come schedulare dei processi da un file</a></li>
+	<li><a href="#p06">Come preparare un task</a></li>
+	<li><a href="#p07">Come preparare un task collector</a></li>
+	<li><a href="#p08">Come preparare uno scheduler listener</a></li>
+	<li><a href="#p09">Esecutori</a></li>
+	<li><a href="#p10">Lancio manuale di un task</a></li>
+	<li><a href="#p11">Cambiare il fuso orario dello scheduler</a></li>
+	<li><a href="#p12">Daemon thread</a></li>
+	<li><a href="#p13">Predictor</a></li>
+	<li><a href="#p14">Cron parser</a></li>
+</ol>
+
+<a name="p01" id="p01"></a>
+<h2>1. Per cominciare</h2>
+<p>L'entit&agrave; principale di cron4j &egrave; lo <strong><em>scheduler</em></strong>
+. Con un'istanza della classe <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html"><em>it.sauronsoftware.cron4j.Scheduler</em></a>
+&egrave; possibile eseguire dei <em>task</em> in dei momenti
+prefissati, lungo l'arco dell'anno. Uno scheduler pu&ograve;
+eseguire un task una volta al minuto, una volta ogni cinque minuti,
+Venerd&igrave; alle 10:00 in punto, il 16 di Febbraio alle 12.30 ma solo
+se cade di Sabato, e cos&igrave; via.</p>
+<p>L'utilizzo dello scheduler di cron4j &egrave; un'operazione che si esegue in
+quattro passi:</p>
+<ol>
+	<li>Si crea un'istanza di <em>Scheduler</em>.</li>
+	<li>Si schedulano le azioni desiderate. Per schedulare un'azione
+	&egrave; necessario comunicare allo scheduler <em>cosa</em> deve fare e
+	<em>quando</em> deve farlo. Il <em>cosa</em> pu&ograve; essere
+	specificato servendosi di un'istanza di <em>java.lang.Runnable</em> o
+	di <a href="api/it/sauronsoftware/cron4j/Task.html"><em>it.sauronsoftware.cron4j.Task</em></a>.
+	Il quando pu&ograve; essere specificato servendosi di uno <em>scheduling
+	pattern</em>, che pu&ograve; essere rappresentato con una semplice stringa o
+	con un'istanza della classe <a
+		href="api/it/sauronsoftware/cron4j/SchedulingPattern.html"><em>it.sauronsoftware.cron4j.SchedulingPattern</em></a>.</li>
+	<li>Si avvia lo scheduler.</li>
+	<li>Si arresta lo scheduler, quando non &egrave; pi&ugrave;
+	necessario.</li>
+</ol>
+<p>Si prenda in considerazione il seguente semplice esempio:</p>
+<pre>import it.sauronsoftware.cron4j.Scheduler;
+
+public class Quickstart {
+
+	public static void main(String[] args) {
+		// Crea l'istanza dello scheduler.
+		Scheduler s = new Scheduler();
+		// Schedula un task, che sar&agrave; eseguito ogni minuto.
+		s.schedule(&quot;* * * * *&quot;, new Runnable() {
+			public void run() {
+				System.out.println(&quot;Un altro minuto &egrave; trascorso...&quot;);
+			}
+		});
+		// Avvia lo scheduler.
+		s.start();
+		// Lascia in esecuzione per dieci minuti.
+		try {
+			Thread.sleep(1000L * 60L * 10L);
+		} catch (InterruptedException e) {
+			;
+		}
+		// Arresta lo scheduler.
+		s.stop();
+	}
+
+}</pre>
+<p>L'esempio resta in esecuzione per circa dieci minuti. Allo
+scoccare di ogni nuovo minuto, secondo l'orologio del sistema ospita,
+stamper&agrave; il triste (ma vero) messaggio &quot;Un altro minuto
+&egrave; trascorso...&quot;.</p>
+<p>Alcuni altri concetti chiave:</p>
+<ul>
+	<li>&Egrave; possibile schedulare quanti task si desidera.</li>
+	<li>&Egrave; possibile schedulare nuovi task in qualsiasi momento, anche
+	dopo che lo scheduler &egrave; stato avviato.</li>
+	<li>&Egrave; possibile modificare lo scheduling pattern associato ad un
+	task schedulato in precedenza, anche dopo che lo scheduler &egrave;
+	stato avviato (<em>reschedulazione</em>).</li>
+	<li>&Egrave; possibile eliminare una schedulazione fatta in precedenza,
+	anche dopo che lo scheduler &egrave; stato avviato (<em>deschedulazione</em>).</li>
+	<li>&Egrave; possibile avviare ed arrestare lo scheduler quante volte si
+	desidera.</li>
+	<li>&Egrave; possibile schedulare dei processi descritti in un file tipo
+	<em>/etc/crontab</em> di UNIX.</li>
+	<li>&Egrave; possibile schedulare da qualsiasi tipo di sorgente, ad
+	esempio da un database o da un file XML.</li>
+	<li>&Egrave; possibile agganciare dei listener allo scheduler e ricevere
+	eventi relativi ai task eseguiti.</li>
+	<li>&Egrave; possibile avere il controllo dei task in esecuzione, ad
+	esempio per metterli in pausa, interromperli o per avere informazioni
+	sul loro stato.</li>
+	<li>&Egrave; possibile comandare il lancio immediato di un task, senza
+	ricorrere allo scheduling pattern.</li>
+	<li>&Egrave; possibile cambiare il Time Zone di riferimento dello
+	scheduler.</li>
+	<li>&Egrave; possibile validare gli scheduling pattern prima di passarli
+	allo scheduler.</li>
+	<li>&Egrave; possibile sapere le date in cui un certo scheduling pattern
+	sar&agrave; soddisfatto.</li>
+</ul>
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+<a name="p02" id="p02"></a>
+<h2>2. Scheduling pattern</h2>
+<p>Un pattern di schedulazione &quot;a la UNIX&quot; &egrave; rappresentato con una stringa divisa in cinque parti, ognuna separata dalla successiva attraverso una spaziatura. I cinque campi sono, rispettivamente:</p>
+<ol>
+<li>Sotto-pattern per i <strong>minuti</strong>.<br />
+Attraverso questo pattern si esprime in quali minuti si desidera avviare il
+task. I valori ammessi vanno da 0 a 59.</li>
+<li>Sotto-pattern per le <strong>ore</strong>.<br />
+Attraverso questo pattern si esprime in quali ore si desidera avviare il
+task. I valori ammessi vanno da 0 a 23.</li>
+<li>Sotto-pattern per il <strong>giorno del mese</strong>.<br />
+Attraverso questo pattern si esprime in quali giorni del mese si desidera
+avviare il task. I valori ammessi vanno da 1 a 31. Lo speciale valore
+&quot;L&quot; pu&ograve; essere utilizzato per riconoscere automaticamente
+l'ultimo giorno del mese.</li>
+<li>Sotto-pattern per il <strong>mese</strong>.<br />
+Attraverso questo pattern si esprime in quali mesi si desidera avviare il
+task. I valori ammessi vanno da 1 (gennaio) a 12 (dicembre) , oppure &egrave;
+possibile usare le stringhe-equivalenti &quot;jan&quot;, &quot;feb&quot;,
+&quot;mar&quot;, &quot;apr&quot;, &quot;may&quot;, &quot;jun&quot;,
+&quot;jul&quot;, &quot;aug&quot;, &quot;sep&quot;, &quot;oct&quot;,
+&quot;nov&quot; e &quot;dec&quot;.</li>
+<li>Sotto-pattern per il <strong>giorno della settimana</strong>.<br />
+Attraverso questo pattern si esprime in quali giorni della settimana si
+desidera avviare il task. I valori ammessi vanno da 0 (domenica) a 6
+(sabato), oppure &egrave; possibile usare le stringhe-equivalenti:
+&quot;sun&quot;, &quot;mon&quot;, &quot;tue&quot;, &quot;wed&quot;,
+&quot;thu&quot;, &quot;fri&quot; e &quot;sat&quot;.</li>
+</ol>
+<p>Se non si intende imporre una restrizione precisa su uno dei campi si
+pu&ograve; usare il carattere jolly asterisco, che sta a significare, a
+seconda del contesto, <em>tutti i minuti</em>, <em>tutte le ore</em>,
+<em>tutti i giorni del mese</em> ecc.</p>
+<p>Una volta che lo scheduler &egrave; stato avviato, un task sar&agrave; eseguito quando le cinque parti del suo pattern di schedulazione risulteranno contemporaneamente soddisfatte.</p>
+<p>I pattern di schedulazione possono essere rappresentati con le istanze della classe  <a
+	href="api/it/sauronsoftware/cron4j/SchedulingPattern.html"><em>it.sauronsoftware.cron4j.SchedulingPattern</em></a>. Pattern di schedulazione non validi causano il lancio di eccezioni del tipo <a
+	href="api/it/sauronsoftware/cron4j/InvalidPatternException.html"><em>it.sauronsoftware.cron4j.InvalidPatternException</em></a>. La classe <em>SchedulingPattern</em> offre inoltre il metodo statico  <a
+	href="api/it/sauronsoftware/cron4j/SchedulingPattern.html#validate(java.lang.String)"><em>validate(String)</em></a>, che pu&ograve; essere utilizzato per validare una stringa prima di utilizzarla come un pattern di schedulazione.</p>
+<p>Alcuni esempi:</p>
+<p><strong>5 * * * *</strong><br />
+Questo pattern avvia il task cui &egrave; collegato una volta all'ora,
+esattamente ogni volta che scatta il quinto minuto di un'ora (alle 00:05,
+alle 01:05, alle 02:05 e cos&igrave; via).</p>
+<p><strong>* * * * *</strong><br />
+Questo pattern avvia il task cui &egrave; collegato allo scattare di ogni
+minuto.</p>
+<p><strong>0 12 * * Mon</strong><br />
+
+Questo pattern avvia il task cui &egrave; collegato allo scattare delle 12:00
+di ogni luned&igrave;.</p>
+<p><strong>0 12 16 * Mon</strong><br />
+Questo pattern avvia il task cui &egrave; collegato allo scattare delle 12:00
+del 16 del mese, ma solo se &egrave; luned&igrave;.</p>
+<p>Su un singolo sotto-pattern, secondo esigenza, &egrave; possibile esprimere
+pi&ugrave; condizioni di avvio, separandole con una virgola. Ad esempio:</p>
+
+<p><strong>59 11 * * 1,2,3,4,5</strong><br />
+Questo pattern avvia il task cui &egrave; collegato alle 11:59 di ogni
+luned&igrave;, marted&igrave;, mercoled&igrave;, gioved&igrave; e
+venerd&igrave;.</p>
+<p>E' inoltre possibile esprimere degli intervalli, con il carattere meno:</p>
+<p><strong>59 11 * * 1-5</strong><br />
+Questo pattern &egrave;, nel significato, identico al precedente.</p>
+
+<p>Il carattere slash pu&ograve; essere usato per identificare dei valori
+all'interno di un range. Si usa sia nella forma <em>*&#47;c</em> sia in quella
+<em>a-b/c</em>. Il sottopattern cos&igrave; espresso viene soddisfatto ogni
+<em>c</em> valori che sono nel range <em>0,valore-massimo</em> oppure
+<em>a-b</em>.</p>
+<p><strong>*&#47;5 * * * *</strong><br />
+Questo pattern avvia il task collegato ogni 5 minuti (0:00, 0:05, 0:10, 0:15
+e cos&igrave; via).</p>
+<p><strong>3-18&#47;5 * * * *</strong><br />
+Questo pattern avvia il task collegato ogni 5 minuti a partire dal terzo di
+ogni ora, fino al diciottesimo (0:03, 0:08, 0:13, 0:18, 1:03, 1:08 e cos&igrave;
+via).</p>
+<p><strong>*&#47;15 9-17 * * *</strong><br />
+Questo pattern avvia il task cui &egrave; collegato ogni 15 minuti nelle ore
+che vanno dalle 9 alle 17. In pratica il task sar&agrave; avviato alle 09:00,
+alle 09:15, alle 09:30, alle 09:45, alle 10:00 e cos&igrave; via, fino ad
+arrivare alle 17:45.</p>
+
+<p><strong>* 12 10-16/2 * *</strong><br />
+Questo pattern avvia il task cui &egrave; collegato ogni minuto delle ore 12,
+ogni due giorni nell'intervallo 10-16.</p>
+<p><strong>* 12 10,12,14,16 * *</strong><br />
+Questo pattern &egrave; identico al precedente ma invece dello slash scrive
+la condizione per esteso.
+</p>
+<p>Tutte le regole illustrate sinora per i sotto-pattern possono essere
+combinate assieme per esprimere condizioni di maggiore complessit&agrave;.
+Alcuni esempi:</p>
+<p><strong>* 12 1-15,17,20-25 * *</strong><br />
+Esegue il task ogni minuto delle ore 12, purch&eacute; il giorno del mese sia
+o tra il primo ed il 15, o il 17, o tra il 20 ed il 25.</p>
+
+<p>Infine pi&ugrave; pattern possono essere concatenati in un pattern composto,
+usando il simbolo pipe come separatore:</p>
+<p><strong>0 5 * * *|8 10 * * *|22 17 * * *</strong><br />
+Esegue il task ogni giorno di ogni mese alle ore 05:00, alle ore 10:08 e alle
+ore 17:22.</p>
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+<a name="p03" id="p03"></a>
+<h2>3. Come schedulare, deschedulare e rischedulare un task</h2>
+<p>La maniera pi&ugrave; semplice per costruire un task &egrave; implementare la ben nota interfaccia <em>java.lang.Runnable</em>. Quando il task &egrave; pronto pu&ograve; essere schedulato con il metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html"><em>it.sauronsoftware.cron4j.Scheduler</em></a>.<a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#schedule(java.lang.String,%20java.lang.Runnable)"><em>schedule(String, Runnable)</em></a>. Il metodo lancia una  <a
+	href="api/it/sauronsoftware/cron4j/InvalidPatternException.html"><em>it.sauronsoftware.cron4j.InvalidPatternException</em></a> se la stringa utilizzata come scheduling pattern &egrave; formalmente non valida (vedi paragrafo precedente).</p>
+<p>Un'altra maniera per allestire un task &egrave; estendo la classe astratta <a
+	href="api/it/sauronsoftware/cron4j/Task.html"><em>it.sauronsoftware.cron4j.Task</em></a>, che permette un controllo pi&ugrave; granulare sulle interazioni tra lo scheduler ed il task stesso. Questo aspetto viene approfondito nel paragrafo &quot;<a href="#p06">Come preparare un task</a>&quot;. Le istanze di <em>Task</em> possono essere schedulate con i metodi <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#schedule(java.lang.String,%20it.sauronsoftware.cron4j.Task)"><em>schedule(String, Task)</em></a> e <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#schedule(it.sauronsoftware.cron4j.SchedulingPattern,%20it.sauronsoftware.cron4j.Task)"><em>schedule(SchedulingPattern, Task)</em></a>.</p>
+<p>I metodi di schedulazione restituiscono sempre un ID che serve per riconoscere e recuperare l'operazione schedulata. Questo ID pu&ograve; essere successivamente utilizzato per rischedulare l'operazione (cio&egrave; per cambiare il suo scheduling pattern), con i metodi <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#reschedule(java.lang.String,%20java.lang.String)"><em>reschedule(String, String)</em></a> e <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#reschedule(java.lang.String,%20it.sauronsoftware.cron4j.SchedulingPattern)"><em>reschedule(String, SchedulingPattern)</em></a>, oppure l'ID pu&ograve; essere usato per deschedulare il task (annulare la sua schedulazione) con il metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#deschedule(java.lang.String)"><em>deschedule(String)</em></a>.</p>
+<p>Il medesimo ID pu&ograve; essere utilizzato anche per recuperare il pattern di schedulazione associato al task, con il metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#getSchedulingPattern(java.lang.String)"><em>getSchedulingPattern(String)</em></a>, ed anche per recuperare il task stesso, con il metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#getTask(java.lang.String)"><em>getTask(String)</em></a>.</p>
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+<a name="p04" id="p04"></a>
+<h2>4. Come schedulare un processo di sistema</h2>
+<p>I processi di sistema possono essere schedulati servendosi della classe wrapper <a href="api/it/sauronsoftware/cron4j/ProcessTask.html">ProcessTask</a>:</p>
+<pre>ProcessTask task = new ProcessTask(&quot;C:\\Windows\\System32\\notepad.exe&quot;);
+Scheduler scheduler = new Scheduler();
+scheduler.schedule(&quot;* * * * *&quot;, task);
+scheduler.start();
+// ... </pre>
+<p>Argomenti al processo da eseguire possono essere forniti servendosi di un array di stringhe:</p>
+<pre>String[] command = { &quot;C:\\Windows\\System32\\notepad.exe&quot;, &quot;C:\\File.txt&quot; };
+ProcessTask task = new ProcessTask(command);
+// ...</pre>
+<p>Variabili d'ambiente valide per il lancio del processo possono essere fornite servendosi di un secondo array di stringhe. Ciascuna variabile deve essere espressa nella forma <em>NOME=VALORE</em>:</p>
+<pre>String[] command = { &quot;C:\\tomcat\\bin\\catalina.bat&quot;, &quot;start&quot; };
+String[] envs = { &quot;CATALINA_HOME=C:\\tomcat&quot;, &quot;JAVA_HOME=C:\\jdks\\jdk5&quot; };
+ProcessTask task = new ProcessTask(command, envs);
+// ...</pre>
+<p>La directory di lavoro del processo pu&ograve; essere impostata come terzo argomento del costrutore:</p>
+<pre>String[] command = { &quot;C:\\tomcat\\bin\\catalina.bat&quot;, &quot;start&quot; };
+String[] envs = { &quot;CATALINA_HOME=C:\\tomcat&quot;, &quot;JAVA_HOME=C:\\jdks\\jdk5&quot; };
+File directory = "C:\\MiaDirectory";
+ProcessTask task = new ProcessTask(command, envs, directory);
+// ...</pre>
+<p>Se nessuna variabile di ambiente deve essere specificata ma si vuole usare il costruttore a tre argomenti per impostare la directory di lavoro, l'argomento <em>envs</em> pu&ograve; essere impostato su <em>null</em>:</p>
+<pre>ProcessTask task = new ProcessTask(command, null, directory);</pre>
+<p>Quando <em>envs</em> &egrave; <em>null</em> il processo eredita le varibiabili di ambiente della JVM che sta eseguendo il codice Java.</p>
+<p>Le variabili d'ambiente e la directory di lavoro possono essere impostati anche successivamente alla creazione del task, servendosi dei metodi <em><a href="api/it/sauronsoftware/cron4j/ProcessTask.html#setEnvs(java.lang.String[])">setEnvs(String[])</a></em> e <a href="api/it/sauronsoftware/cron4j/ProcessTask.html#setDirectory(java.io.File)"><em>setDirectory(java.io.File)</em></a>.</p>
+<p>I canali di standard output e standard error del processo possono essere redirezionati verso dei file con i metodi <a href="api/it/sauronsoftware/cron4j/ProcessTask.html#setStdoutFile(java.io.File)"><em>setStdoutFile(java.io.File)</em></a> e <a href="api/it/sauronsoftware/cron4j/ProcessTask.html#setStderrFile(java.io.File)"><em>setStderrFile(java.io.File)</em></a>:</p>
+<pre>ProcessTask task = new ProcessTask(command, envs, directory);
+task.setStdoutFile(new File(&quot;out.txt&quot;));
+task.setStderrFile(new File(&quot;err.txt&quot;));</pre>
+<p>Lo standard input, in maniera simile, pu&ograve; essere letto da un file esistente, impostandolo con il metodo <em><a href="api/it/sauronsoftware/cron4j/ProcessTask.html#setStdinFile(java.io.File)">setStdinFile(java.io.File)</a></em>:</p>
+<pre>ProcessTask task = new ProcessTask(command, envs, directory);
+task.setStdinFile(new File(&quot;in.txt&quot;));</pre>
+
+<a name="p05" id="p05"></a>
+<h2>5. Come schedulare dei processi da un file</h2>
+<p>Lo scheduler di cron4j permette di schedulare una serie di processi dichiarati in un file esterno all'applicazione.</p>
+<p>Per prima cosa &egrave; necessario preparare il file, che &egrave; estremamente simile a quello utilizzato dal crontab di UNIX. Quindi il file va registrato nello scheduler con il metodo  <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#scheduleFile(java.io.File)"><em>scheduleFile(File)</em></a>. Successivamente il file pu&ograve; essere rimosso dallo scheduler con il metodo  <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#descheduleFile(java.io.File)"><em>descheduleFile(File)</em></a>. L'elenco di tutti i file schedulati &egrave; disponibile chiamando il metodo  <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#getScheduledFiles()"><em>getScheduledFiles()</em></a>.</p>
+<p>I file schedulati vengono esaminati ed interpretati ogni minuto. Lo scheduler, al termine del parsing ricorrente, lancia tutti quei processi il cui pattern di schedulazione risulta verificato dall'orologio di sistema.</p>
+<p>Le regole sintattiche per i file di cron4j sono riportate nel paragrafo &quot;<a href="#p13">Cron parser</a>&quot;.</p>
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+<a name="p06" id="p06"></a>
+<h2>6. Come preparare un task</h2>
+<p>Un oggetto di tipo <em>java.lang.Runnable</em> costituisce la pi&ugrave; semplice forma di task, ma per avere un controllo pi&ugrave; dettagliato di quello che accade durante l'esecuzione di una routine &egrave; necessario estendere la classe  <a
+	href="api/it/sauronsoftware/cron4j/Task.html"><em>it.sauronsoftware.cron4j.Task</em></a>. Dal punto di vista dello sviluppatore, implementare <em>Runnable</em> o estendere <em>Task</em> &egrave; quasi la stessa cosa: mentre la prima richiede l'implementazione del metodo <em>run()</em>, <em>Task</em> richiede invece l'implementazione del metodo <a
+	href="api/it/sauronsoftware/cron4j/Task.html#execute(it.sauronsoftware.cron4j.TaskExecutionContext)"><em>execute(TaskExecutionContext)</em></a>. Questo metodo fornisce sempre un oggetto di tipo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutionContext.html"><em>it.sauronsoftware.cron4j.TaskExecutionContext</em></a>, che <em>Runnable.run()</em> non fornisce. Il contesto ricevuto in argomento pu&ograve; essere impiegato nelle seguenti maniere:</p>
+<ul>
+
+	<li>
+	<p>Un task pu&ograve; comunicare con il suo <em>esecutore</em>, notificando il suo stato attraverso un messaggio di testo. Questa funzionalit&agrave; viene chiamata <em>status tracking</em>. Per supportare lo status tracking bisogna ridefinire il metodo <a
+		href="api/it/sauronsoftware/cron4j/Task.html#supportsStatusTracking()"><em>supportsStatusTracking()</em></a>, che deve restituire il valore <em>true</em>. Fatto ci&ograve;, all'interno del metodo <em>execute(TaskExecutionContext)</em> &egrave; possibile richiamare quante volte si desidera il metodo <a
+		href="api/it/sauronsoftware/cron4j/TaskExecutionContext.html#setStatusMessage(java.lang.String)"><em>setStatusMessage(String)</em></a>. Il messaggio di stato consegnato al contesto di esecuzione sar&agrave; propagato al suo esecutore. Attraverso l'esecutore, il messaggio di stato pu&ograve; essere intercettato da un oggetto esterno (vedi paragrafo &quot;<a href="#p09">Esecutori</a>&quot;).</p>
+	</li>
+
+	<li>
+	  <p>Un task pu&ograve; comunicare con il suo <em>esecutore</em>, notificando il livello di completamento dell'operazione raggiunto. Questa funzionalit&agrave; viene chiamata <em>completeness tracking</em>. Per supportare il completeness tracking bisogna ridefinire il metodo <a
+		href="api/it/sauronsoftware/cron4j/Task.html#supportsCompletenessTracking()"><em>supportsCompletenessTracking()</em></a>, che deve restituire il valore <em>true</em>. Fatto ci&ograve;, all'interno del metodo <em>execute(TaskExecutionContext)</em> &egrave; possibile richiamare quante volte si desidera il metodo <a
+		href="api/it/sauronsoftware/cron4j/TaskExecutionContext.html#setStatusMessage(java.lang.String)"> <em>setCompleteness(double)</em></a>, fornendo un valore reale compreso tra 0 ed 1 (estremi compresi). Il valore consegnato al contesto di esecuzione sar&agrave; propagato al suo esecutore. Attraverso l'esecutore, il livello pu&ograve; essere intercettato da un oggetto esterno (vedi paragrafo &quot;<a href="#p09">Esecutori</a>&quot;).</p>
+  </li>
+	<li>
+	<p>L'esecuzione di un task, opzionalmente, pu&ograve; essere messa in pausa. Per supportare questa caratteristica &egrave; necessario ridefinire il metodo 
+	  <a href="api/it/sauronsoftware/cron4j/Task.html#canBePaused()"><em>canBePaused()</em></a>, che deve restituire il valore <em>true</em>. Fatto ci&ograve;, all'interno del metodo <em>execute(TaskExecutionContext)</em> &egrave; necessario richiamare periodicamente il metodo del contesto  <a
+		href="api/it/sauronsoftware/cron4j/TaskExecutionContext.html#pauseIfRequested()"><em>pauseIfRequested()</em></a>. Questo metodo mette in pausa l'esecuzione se un agente esterno lo ha richiesto. Il metodo ritorner&agrave; il controllo al codice chiamante solo dopo che un agente esterno ha comando la ripresa (o l'interruzione definitiva) dell'esecuzione (vedi paragrafo &quot;<a href="#p09">Esecutori</a>&quot;).</p>
+	</li>
+
+	<li>
+	<p>L'esecuzione di un task, opzionalmente, pu&ograve; essere interrotta. Per supportare questa caratteristica &egrave; necessario ridefinire il metodo <a
+		href="api/it/sauronsoftware/cron4j/Task.html#canBeStopped()"><em>canBeStopped()</em></a><a href="api/it/sauronsoftware/cron4j/Task.html#canBePaused()"></a>, che deve restituire il valore <em>true</em>. Fatto ci&ograve;, all'interno del metodo <em>execute(TaskExecutionContext)</em> &egrave; necessario richiamare periodicamente il metodo del contesto <a
+		href="api/it/sauronsoftware/cron4j/TaskExecutionContext.html#isStopped()"><em>isStopped()</em></a>. Questo metodo restituisce <em>true</em> se un agente esterno ha comandato l'interruzione dell'esecuzione. A questo punto il codice ha il compito di reagire, provvedendo ad un elegante ma veloce arresto delle operazioni in corso (vedi paragrafo &quot;<a href="#p09">Esecutori</a>&quot;).</p>
+	</li>
+
+	<li>
+	  <p>Attraverso il contesto, il task pu&ograve; recuperare un riferimento al proprio scheduler, con il metodo <a
+		href="api/it/sauronsoftware/cron4j/TaskExecutionContext.html#getScheduler()"><em>getScheduler()</em></a>.</p>
+	</li>
+
+  <li>
+    <p>Attraverso il contesto, il task pu&ograve; recuperare un riferimento al proprio esecutore, con il metodo <a
+		href="api/it/sauronsoftware/cron4j/TaskExecutionContext.html#getTaskExecutor()"><em>getTaskExecutor()</em></a><a
+		href="api/it/sauronsoftware/cron4j/TaskExecutionContext.html#getScheduler()"></a>.</p>
+  </li>
+</ul>
+
+<p>Un oggetto <em>Task</em> pu&ograve; essere <a href="#p03">schedulato</a>, <a href="#p10">lanciato immediatamente</a> o restituito da un <a href="#p07">task collector</a>.</p>
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+<a name="p07" id="p07"></a>
+<h2>7. Come preparare un task collector</h2>
+<p>&Egrave; possibile innestare all'interno dello scheduler di cron4j una sorgente di task personalizzata, sfruttando un <em>task collector</em>.</p>
+<p>Lo scheduler di cron4j, infatti, supporta la registrazione di uno o pi&ugrave; oggetti di tipo <a
+	href="api/it/sauronsoftware/cron4j/TaskCollector.html"><em>it.sauronsoftware.cron4j.TaskCollector</em></a>, attraverso il metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#addTaskCollector(it.sauronsoftware.cron4j.TaskCollector)"><em>addTaskCollector(TaskCollector)</em></a>. I collector registrati possono essere successivamente recuperato con il metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#getTaskCollectors()"><em>getTaskCollectors()</em></a>. Un collector registrato nello scheduler pu&ograve; essere rimosso servendosi del metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#removeTaskCollector(it.sauronsoftware.cron4j.TaskCollector)"><em>removeTaskCollector(TaskCollector)</em></a>. I collector possono essere aggiunti, rimossi o recuperati in qualsiasi momento, anche quando lo scheduler &egrave; avviato.</p>
+<p>Ogni collector registrato viene consultato dallo scheduler una volta al minuto. Lo scheduler richiama il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskCollector.html#getTasks()"><em>getTasks()</em></a> del collector. L'implementazione del metodo &egrave; tenuta a restituire un oggetto di tipo <a
+	href="api/it/sauronsoftware/cron4j/TaskTable.html"><em>it.sauronsoftware.cron4j.TaskTable</em></a>. Una <em>TaskTable</em> &egrave; una tabella che associa task e pattern di schedulazione. Lo scheduler scorre le righe della tabella restituita, ed esegue tutti quei task il cui pattern di schedulazione &egrave; in accordo con l'orario del sistema.</p>
+<p>Un collector personalizzato pu&ograve; essere impiegato per recuperare la lista dei task da eseguire da una sorgente esterna, ad esempio un database o un file XML, i cui contenuti possono essere variati in qualsiasi momento durante l'esecuzione del software.</p>
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+<a name="p08" id="p08"></a>
+<h2>8. Come preparare uno scheduler listener</h2>
+<p>Implementando l'interfaccia <a href="api/it/sauronsoftware/cron4j/SchedulerListener.html"><em>it.sauronsoftware.cron4j.SchedulerListener</em></a> &egrave; possibile realizzare dei listener da registrare su uno scheduler.</p>
+<p>L'interfaccia <em>SchedulerListener</em> richiede l'implementazione dei seguenti metodi:</p>
+<ul>
+	<li>
+	<p><a
+		href="api/it/sauronsoftware/cron4j/SchedulerListener.html#taskLaunching(it.sauronsoftware.cron4j.TaskExecutor)"><em>taskLaunching(TaskExecutor)</em></a><br />
+	Questo metodo viene chiamato ogni volta che l'esecuzione di un task ha inizio.</p>
+	</li>
+	<li>
+	<p><a
+		href="api/it/sauronsoftware/cron4j/SchedulerListener.html#taskSucceeded(it.sauronsoftware.cron4j.TaskExecutor)"><em>taskSucceeded(TaskExecutor)</em></a><br />
+	Questo metodo viene chiamato ogni volta che l'esecuzione di un task &egrave; terminata con successo.</p>
+	</li>
+	<li>
+	<p><a
+		href="api/it/sauronsoftware/cron4j/SchedulerListener.html#taskFailed(it.sauronsoftware.cron4j.TaskExecutor,%20java.lang.Throwable)"><em>taskFailed(TaskExecutor,
+	Throwable)</em></a><br />
+	Questo metodo viene chiamato ogni volta che l'esecuzione di un task &egrave; fallita a causa di un'eccezione non gestita.</p>
+	</li>
+</ul>
+<p>Si veda il paragrafo  &quot;<a href="#p09">Esecutori</a>&quot; per avere maggiori informazioni circa gli esecutori di task.</p>
+<p>Gli oggetti  <em>SchedulerListener</em> possono essere registrati in uno scheduler attraverso il metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#addSchedulerListener(it.sauronsoftware.cron4j.SchedulerListener)"><em>addSchedulerListener(SchedulerListener)</em></a>. I listener registrati in precedenza possono essere rimossi chiamato il metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#removeSchedulerListener(it.sauronsoftware.cron4j.SchedulerListener)"><em>removeSchedulerListener(SchedulerListener)</em></a>. La lista di tutti i listener registrati &egrave; messa a disposizione dal metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#getSchedulerListeners()"><em>getSchedulerListeners()</em></a>.</p>
+<p>Gli <em>SchedulerListener</em> possono essere aggiunti, rimossi e consultati in qualsiasi momento, anche quando lo scgheduler &egrave; avviato.</p>
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+<a name="p09" id="p09"></a>
+<h2>9. Esecutori</h2>
+<p>Lo scheduler, quando &egrave; attivo, pu&ograve; restituire i propri <em>esecutori</em>.
+Un esecutore &egrave; simile ad un thread. Lo scheduler usa gli esecutori per eseguire i task.</p>
+<p>Chiamando il metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html"><em>Scheduler</em></a>.<a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#getExecutingTasks()"><em>getExecutingTasks()</em></a>
+si ottiene la lista degli esecutori correntemente attivi.</p>
+<p>L'esecutore associato all'esecuzione di un task viene anche consegnato agli <a
+	href="api/it/sauronsoftware/cron4j/SchedulerListener.html"><em>SchedulerListener</em></a>
+registrati nello scheduler (si veda il paragrafo &quot;<a href="#p08">Come preparare uno scheduler
+listener</a>&quot;).</p>
+<p>Ogni esecutore, rappresentato da un oggetto <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html"><em>it.sauronsoftware.cron4j.TaskExecutor</em></a>, cura l'esecuzione di un differente task.</p>
+<p>Il task eseguito &egrave; recuperabile attraverso il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#getTask()"><em>getTask()</em></a>.</p>
+<p>Lo stato dell'esecutore pu&ograve; essere controllato con il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#isAlive()"><em>isAlive()</em></a>, che restituisce <em>true</em> se l'esecutore &egrave; correntemente in esecuzione.</p>
+<p>Se l'esecutore &egrave; attivo, &egrave; possibile fermarsi in attesa del completamento del task chiamando il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#join()"><em>join()</em></a>.</p>
+<p>Il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#supportsStatusTracking()"><em>supportsStatusTracking()</em></a> restituisce <em>true</em> se il task in esecuzione supporta lo <em>status tracking</em>. In questo caso &egrave; possibile recuperare lo stato dell'esecuzione invocando il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#getStatusMessage()"><em>getStatusMessage()</em></a>.</p>
+<p>Il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#supportsCompletenessTracking()"><em>supportsCompletenessTracking()</em></a><a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#supportsStatusTracking()"></a> restituisce <em>true</em> se il task in esecuzione supporta il <em>completeness tracking</em>. In questo caso &egrave; possibile recuperare il livello di completamento dell'esecuzione invocando il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#getCompleteness()"><em>getCompleteness()</em></a><a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#getStatusMessage()"></a>. Il metodo restituisce un valore compreso tra 0 (esecuzione appena avviata) ed 1 (esecuzione conmpletata), estremi compresi.</p>
+<p>Il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#canBePaused()"><em>canBePaused()</em></a> restituisce <em>true</em> se il task in esecuzione accetta di poter essere messo in pausa. In questo caso &egrave; possibile mettere in pausa l'esecuzione chiamando il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#pause()"><em>pause()</em></a>. Con il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#isPaused()"><em>isPaused()</em></a>, invece, &egrave; possibile controllare se l'esecuzione &egrave; stata messa in pausa. L'esecuzione pu&ograve; essere ripresa servendosi del metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#resume()"><em>resume()</em></a>.</p>
+<p>Il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#canBeStopped()"><em>canBeStopped()</em></a><a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#canBePaused()"></a> restituisce <em>true</em> se il task in esecuzione accetta di poter essere interrotto. In questo caso &egrave; possibile interrompere l'esecuzione chiamando il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#stop()"><em>stop()</em></a>. Con il metodo <a href="api/it/sauronsoftware/cron4j/TaskExecutor.html#isStopped()"><em>isStopped()</em></a>, invece, &egrave; possibile controllare se l'esecuzione &egrave; stata interrotta. Una esecuzione interrotta non pu&ograve; essere ripresa.</p>
+<p>Il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#getStartTime()"><em>getStartTime()</em></a> restituisce il timestamp corrispondente al momento in cui l'esecutore &egrave; stato avviato, oppure un valore negativo se l'esecutore non &egrave; ancora stato avviato.</p>
+<p>Il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#getScheduler()"><em>getScheduler()</em></a> restituisce lo scheduler proprietario dell'esecutore.</p>
+<p>Il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#getGuid()"><em>getGuid()</em></a> restituisce un ID universalmente univoco associato all'esecutore, sotto forma di stringa.</p>
+<p>Gli esecutori offrono inoltre un'interfaccia di programmazione basata sugli eventi, attraverso l'interfaccia <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutorListener.html"><em>it.sauronsoftware.cron4j.TaskExecutorListener</em></a>. Un <em>TaskExecutorListener</em> pu&ograve; essere registrato su un <em>TaskExecutor</em> chiamando il suo metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#addTaskExecutorListener(it.sauronsoftware.cron4j.TaskExecutorListener)"><em>addTaskExecutorListener(TaskExecutorListener)</em></a>. Successivamente il listener pu&ograve; essere rimosso con il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#removeTaskExecutorListener(it.sauronsoftware.cron4j.TaskExecutorListener)"><em>removeTaskExecutorListener(TaskExecutorListener)</em></a>. L'elenco dei listener registrati in un esecutore pu&ograve; essere recuperato con il metodo <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html#getTaskExecutorListeners()"><em>getTaskExecutorListeners()</em></a>.</p>
+<p>L'interfaccia <em>TaskExecutorListener</em> richiede i seguenti metodi:</p>
+<ul><li><p><a
+		href="api/it/sauronsoftware/cron4j/TaskExecutor.html#executionPausing(it.sauronsoftware.cron4j.TaskExecutor)"><em>executionPausing(TaskExecutor)</em></a><br />
+	Questo metodo viene richiamato quando all'esecutore viene richiesto di mettere in pausa l'esecuzione corrente. Il parametro fornito rappresenta l'esecutore interessato dall'evento.</p>
+	</li>
+
+	<li>
+	<p><a
+		href="api/it/sauronsoftware/cron4j/TaskExecutor.html#executionResuming(it.sauronsoftware.cron4j.TaskExecutor)"><em>executionResuming(TaskExecutor)</em></a><br />
+	Questo metodo viene richiamato quando all'esecutore viene richiesto di riprendere l'esecuzione corrente, dopo che questa &egrave; stata messa in pausa. Il parametro fornito rappresenta l'esecutore interessato dall'evento.</p>
+	</li>
+
+	<li>
+	<p><a
+		href="api/it/sauronsoftware/cron4j/TaskExecutor.html#executionStopping(it.sauronsoftware.cron4j.TaskExecutor)"><em>executionStopping(TaskExecutor)</em></a><br />
+	Questo metodo viene richiamato quando all'esecutore viene richiesto di interrompere l'esecuzione corrente. Il parametro fornito rappresenta l'esecutore interessato dall'evento.</p>
+	</li>
+
+	<li>
+	<p><a
+		href="api/it/sauronsoftware/cron4j/TaskExecutor.html#executionTerminated(it.sauronsoftware.cron4j.TaskExecutor,%20java.lang.Throwable)"><em>executionTerminated(TaskExecutor,
+	Throwable)</em></a><br />
+	Questo metodo viene richiamato quando l'esecutore ha completato l'esecuzione del task. Il primo parametro fornito rappresenta l'esecutore interessato dall'evento. Il secondo parametro, di tipo <em>java.lang.Throwable</em>, &egrave; <em>null</em> nel caso in cui l'esecuzione &egrave; terminata regolarmente, mentre &egrave; valorizzato con l'eccezione riscontrata nel caso in cui l'esecuzione sia terminata anticipatamente a causa di un errore.</p>
+	</li>
+
+	<li>
+	<p><a
+		href="api/it/sauronsoftware/cron4j/TaskExecutor.html#statusMessageChanged(it.sauronsoftware.cron4j.TaskExecutor,%20java.lang.String)"><em>statusMessageChanged(TaskExecutor,
+	String)</em></a><br />
+	Questo metodo viene richiamato ogni volta che il messaggio di stato dell'esecuzione viene modificato dal task. Il primo parametro fornito rappresenta l'esecutore interessato dall'evento. Il secondo parametro, di tipo <em>java.lang.String</em>, &egrave; il nuovo messaggio di stato propagato dal task.</p>
+	</li>
+
+	<li>
+	<p><a
+		href="api/it/sauronsoftware/cron4j/TaskExecutor.html#completenessValueChanged(it.sauronsoftware.cron4j.TaskExecutor,%20double)"><em>completenessValueChanged(TaskExecutor,
+	double)</em></a><br />
+	Questo metodo viene richiamato ogni volta che il livello di completamento dell'esecuzione viene aggiornato dal task. Il primo parametro fornito rappresenta l'esecutore interessato dall'evento. Il secondo parametro, di tipo <em>double</em>, &egrave; il nuovo valore propagato dal task, sempre e comunque compreso tra 0 ed 1.</p>
+	</li>
+
+</ul>
+
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+<a name="p10" id="p10"></a>
+<h2>10. Lancio manuale di un task </h2>
+<p>Se los cheduler &egrave; attivo, &egrave; possibile comandare esplicitamente il lancio immediato di un task, anche se questo non &egrave; schedulato o se il suo scheduling pattern non &egrave; al momento rispettato. Il metodo necessario &egrave;  <a href="api/it/sauronsoftware/cron4j/Scheduler.html"><em>Scheduler</em></a>.<a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#launch(it.sauronsoftware.cron4j.Task)"><em>launch(Task)</em></a>, che restituisce l'istanza di <a
+	href="api/it/sauronsoftware/cron4j/TaskExecutor.html"><em>TaskExecutor</em></a> che rappresenta l'esecuzione del task appena lanciato (si veda il paragrafo &quot;<a href="#p09">Esecutori</a>&quot;).</p>
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+<a name="p11" id="p11"></a>
+<h2>11. Cambiare il fuso orario dello scheduler </h2>
+<p>Lo scheduler, per default, utilizza il fuso orario impostato sul sistema ospite. &Egrave; per&ograve; possibile richiedere ad uno scheduler di lavorare secondo un fuso orario (<em>time zone</em>) differente. I metodi per il controllo di questa caratteristica sono <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html"><em>Scheduler</em></a>.<a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#setTimeZone(java.util.TimeZone)"><em>setTimeZone(TimeZone)</em></a> e <a href="api/it/sauronsoftware/cron4j/Scheduler.html"><em>Scheduler</em></a>.<a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#getTimeZone()"><em>getTimeZone()</em></a>.</p>
+<p>Se si cambia il fuso orario di riferimento, il tempo segnato dall'orologio di sistema sar&agrave; automaticamente adattato al fuso di destinazione, prima di essere utilizzato dallo scheduler per verificare i pattern di schedulazione associati ai task registrati.</p>
+<p>Si ipotizzi questa situazione:</p>
+<ul>
+	<li>Tempo di sistema: 10:00</li>
+	<li>Fuso orario del sistema: GMT+1</li>
+	<li>Fuso orario dello scheduler: GMT+3</li>
+</ul>
+<p>Lo scheduler, prima di confrontare il tempo di sistema con i pattern registrati, converte l'orario 10:00 da GMT+1 to GMT+3. Significa che 10:00 diventa 12:00 (quando nel fuso GMT+1 sono le 10:00, nel fuso GMT+3 sono le 12:00). A questo punto saranno eseguiti quei task il cui pattern di schedulazione sia soddisfatto dall'orario 12:00, e non quelli soddisfatti dall'orario 10:00 (ad esempio <em>0 12 * * *</em> sar&agrave; eseguito, mentre <em>0 10 * * *</em> no).</p>
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+<a name="p12" id="p12"></a>
+<h2>12. Thread demoni</h2>
+<p>La Java Virtual Machine termina quando tutti i thread rimasti in esecuzione sono thread <em>demoni</em>. Se necessario, lo scheduler di cron4j pu&ograve; essere configurato affinch&eacute; qualsiasi thread da lui generato sia marcato come thread demone. La caratteristica viene controllata con il metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html"><em>Scheduler</em></a>.<a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#setDaemon(boolean)"><em>setDaemon(boolean)</em></a>. il metodo deve essere richiamato prima che lo scheduler venga avviato. Il valore predefinito &egrave; <em>false</em> (se non si chiamata <em>setDaemon(true)</em>, quindi, lo scheduler genera tutti thread che non sono demoni). Per verificare l'impostazione corrente si deve chiamare il metodo <a href="api/it/sauronsoftware/cron4j/Scheduler.html"><em>Scheduler</em></a>.<a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#isDaemon()"><em>isDaemon()</em></a>.</p>
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+<a name="p13" id="p13"></a>
+<h2>13. Predictor</h2>
+<p>La classe <a href="api/it/sauronsoftware/cron4j/Predictor.html"><em>it.sauronsoftware.cron4j.Predictor</em></a>
+&egrave; in grado di predire il momento in cui un certo pattern di schedulazione sar&agrave; soddisfatto.</p>
+<p>Si immagini di voler conoscere quando lo scheduler eseguir&agrave; le prossime <em>n</em> esecuzioni di un task il cui pattern associato &egrave; <em>0 3 * jan-jun,sep-dec mon-fri</em>. Ecco come fare:</p>
+<pre>String pattern = &quot;0 3 * jan-jun,sep-dec mon-fri&quot;;
+Predictor p = new Predictor(pattern);
+for (int i = 0; i &lt; n; i++) {
+	System.out.println(p.nextMatchingDate());
+}</pre>
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+<a name="p14" id="p14"></a>
+<h2>14. Cron parser</h2>
+<p>La classe <a href="api/it/sauronsoftware/cron4j/CronParser.html"><em>it.sauronsoftware.cron4j.CronParser</em></a>
+pu&ograve; essere usata per interpretare testi simili a quelli utilizzati nel file <em>crontab</em> di UNIX.</p>
+<p>Se l'intenzione &egrave; schedulare una serie di processi dichiarati in un file tipo il crontab, non c'&egrave; bisogno di ricorrere al <em>CronParser</em>: &egrave; sufficiente agire con il metodo <a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html"><em>Scheduler</em></a>.<a
+	href="api/it/sauronsoftware/cron4j/Scheduler.html#scheduleFile(File)"><em>scheduleFile(File)</em></a>.</p>
+<p>Il <em>CronParser</em> pu&ograve; invece essere utilizzato quando il metodo <em>Scheduler.scheduleFile(File)</em> non &egrave; abbastanza. Ad esempio, la lista dei processi da eseguire &egrave; conservata nelle righe di una tabella di un database, e non nelle righe di un file. Per risolvere il problema &egrave; possibile implementare il proprio <a
+	href="api/it/sauronsoftware/cron4j/TaskCollector.html"><em>it.sauronsoftware.cron4j.TaskCollector</em></a>, sfruttando i servigi della classe <em>CronParser</em> per non dover ogni volta reinventare la ruota.</p>
+<p>Con il <em>CronParser</em> &egrave; possibile esaminare un intero file, un intero stream oppure una semplice riga di testo alla volta.</p>
+<p>Una linea pu&ograve; essere vuota, pu&ograve; contenere un commento o pu&ograve; essere una <em>linea di schedulazione</em>.</p>
+<p>Una linea senza caratteri, o una linea con soli caratteri di spaziatura &egrave; considerata vuota dal <em>CronParser</em>.</p>
+<p>Una linea il cui primo carattere non di spaziatura &egrave; un cancelletto (#) viene considerata come un commento.</p>
+<p>Sia le linee vuote sia le linee di commento vengono ignorate dal parser.</p>
+<p>Le linee di schedulazione, invece, vengono prese in esame.</p>
+<p>Una linea di schedulazione, per essere valida, deve rispettare la forma:</p>
+<pre>scheduling-pattern [options] command [args]</pre>
+<ul>
+	<li><em>scheduling-pattern</em> &egrave; un pattern di schedulazione valido, in accordo con la definizione di pattern fornita dalla classe <a
+		href="api/it/sauronsoftware/cron4j/SchedulingPattern.html"><em>it.sauronsoftware.cron4j.SchedulingPattern</em></a>.</li>
+	<li><em>options</em> &egrave; una lista di informazioni aggiuntive opzionali usate da cron4j per allestire l'ambiente di esecuzione del processo. Pi&ugrave; basso c'&egrave; una descrizione dettagliata delle opzioni supportate.</li>
+	<li><em>command</em> &egrave; un comando di sistema valido, ad esempio la chiamata ad un eseguibile.</li>
+	<li><em>args</em> &egrave; una lista opzionale di argomenti da fornire al comando.</li>
+</ul>
+<p>Dopo il pattern di schedulazione, tutti gli altri elementi di ciascuna linea sono separati da caratteri di spaziatura, oppure delimitati con una coppia di doppi apici (&quot;).</p>
+<p>Gli elementi racchiusi tra doppi apici possono far uso delle seguenti sequenze di escape:</p>
+<ul>
+	<li>\&quot; - doppi apici (quotation mark)</li>
+	<li>\\ - controslash (back slash)</li>
+	<li>\/ - slash</li>
+	<li>\b - cancellazione (back space)</li>
+	<li>\f - form feed</li>
+	<li>\n - nuova linea (new line)</li>
+	<li>\r - ritorno a capo (carriage return)</li>
+	<li>\t - tabulatore (horizontal tab)</li>
+	<li>\u<em>quattro-cifre-esadecimali</em> - il carattere il cui indice Unicode &egrave; quello espresso mediante le quattro cifre esadecimali utilizzate</li>
+</ul>
+<p>La parte <em>options</em> &egrave; una collezione di uno o pi&ugrave; elementi scelti fra i seguenti:</p>
+<ul>
+	<li>IN:<em>file-path</em> - Redirige il canale di standard input del comando sul file al percorso specificato.</li>
+	<li>OUT:<em>file-path</em> - Redirige il canale di standard output del comando sul file al percorso specificato.</li>
+	<li>ERR:<em>file-path</em> - Redirige il canale di standard error del comando sul file al percorso specificato.</li>
+	<li>ENV:<em>name</em>=<em>value</em> - Definisce una variabile di ambiente valida durante l'esecuzione del comando.</li>
+	<li>DIR:<em>directory-path</em> - Imposta la directory di lavoro del comando. Questa funzionalit&agrave; non &egrave; supportata se la JVM che esegue lo scheduler &egrave; antecedente alla versione 1.3.</li>
+</ul>
+<p>Si pu&ograve; schedulare anche l'invocazione di un metodo di una classe Java, purch&eacute;
+la classe possa essere caricara dal ClassLoader che carica lo scheduler. Il metodo, nello specifico,
+deve essere statico e deve accettare come solo argomento un array di stringhe. Un metodo di
+questo tipo pu&ograve; essere richiamato con una linea del seguente tipo:</p>
+<pre>scheduling-pattern java:nomeClasse#nomeMetodo [args]</pre>
+<p>La parte <em>#nomeMetodo</em> pu&ograve; essere omessa: in questo caso sar&agrave; ricercato
+automaticamente il metodo <em>main(String[])</em>.</p>
+<p>Si faccia attenziona al fatto che i metodi statici vengono invocati ed eseguiti
+all'interno della stessa JVM che esegue lo scheduler. Pertanto non &egrave; possibile
+applicare ai task di questo tipo le opzioni IN, OUT, ERR, ENV e DIR, valide invece per
+i processi.</p>
+<p>Le linee di schedulazione non valide vengono scartate senza bloccare l'operazione di parsing, ma un messaggio di errore viene emesso sul canale di standard error dell'applicazione.</p>
+<p>Ecco qualche esempio di linee di scheduling valide su un sistema Windows:</p>
+<pre>0 5 * * * sol.exe
+0,30 * * * * OUT:C:\ping.txt ping 10.9.43.55
+0,30 4 * * * &quot;OUT:C:\Documents and Settings\Carlo\ping.txt&quot; ping 10.9.43.55
+0 3 * * * ENV:JAVA_HOME=C:\jdks\1.4.2_15 DIR:C:\myproject OUT:C:\myproject\build.log C:\myproject\build.bat &quot;Nightly Build&quot;
+0 4 * * * java:mypackage.MyClass#startApplication myOption1 myOption2</pre>
+<p><a href="#pIndex">Torna all'indice</a></p>
+
+</body>
+</html>

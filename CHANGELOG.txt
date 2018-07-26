@@ -1,0 +1,98 @@
+RELEASE 2.2.5 - 2011-12-28
+
+- setTimeZone() method has been add to the Predictor class.
+- A bug causing a rare deadlock condition while shutting down
+  the scheduler has been fixed.
+
+(Tanks to Tim McCune and Eugene Yao)
+
+
+RELEASE 2.2.4 - 2011-08-26
+
+- A bug has been fixed in the ProcessTask class.
+
+(Thanks to Ivan Yiu)
+
+
+RELEASE 2.2.3 - 2010-05-30
+
+- A bug has been fixed in the ProcessTask class, avoiding
+  the "too many open files" problem encountered on some
+  systems.
+- A bug has been fixed in the SchedulingPattern class,
+  avoiding the possibility to use a value greater than
+  23 in the hour field of a scheduling pattern.
+  
+(Thanks to Ivan Yiu and John Mikula)
+
+
+RELEASE 2.2.2 - 2010-03-09
+
+- A bug in the scheduling pattern parser has been fixed.
+- Some errors in the manual and in the javadocs have been fixed.
+
+(Thanks to Bart Lamberigts, Ron Coleman, Assaf Moldavsky)
+
+
+RELEASE 2.2.1 - 2010-01-04
+
+- Bugfix in the newly implemented "last day of month" feature.
+
+(Thanks to Stavros Michael)
+
+
+RELEASE 2.2 - 2010-01-01
+
+- The CronParser has been enhanced. Before this release a cron line
+  could be used only to launch external process. Now it can be used
+  also to invoke a static method within a class.
+
+- A new facility has been added to the scheduling pattern syntax.
+  The special value "L" can now be used to recognize the last day
+  of month.
+
+- Bugfix: Time Zones are now used correctly by the scheduler.
+  
+(Thanks to Sikora Tomasz and Paul Fernley)
+
+
+RELEASE 2.1.1 - 2009-09-18
+
+- Bugfix: TimerThread is now spawned as a daemon, if the scheduler has
+  been set to act as a daemon with the setDaemon(true) method.
+- The step values parser has been changed to be more compliant with the
+  majority of the cron implementations. Now "a-b/c" means "took a value
+  every c elements in the range a-b", and no more "took every element
+  within the a-b range whose value can be divided by c". In example
+  "2-12/5" means now "2,7,12", while before it was "5,10". 
+
+(Thanks to Cheong Chung Onn and Bryan Keller)
+
+
+RELEASE 2.1 - 2009-08-26
+
+- The ProcessTask class has been added. Developers can use it to
+  schedule system executable processes. Some other minor API
+  changes have been made.
+
+(Thanks to Paul Parlett)
+
+
+RELEASE 2.0.1 - 2009-06-01
+
+- The SchedulingPattern parser has been rewritten to be 100% compliant
+  with the UNIX crontab specification.
+
+(Thanks to Paul Logan)
+
+
+RELEASE 2.0 - 2009-04-25 
+
+The cron4j 2.0 platform includes several new amazing features:
+- New task abstraction layer
+- Task collectors
+- Task executors
+- Scheduling from files
+- Cron parser
+- Support for different Time Zones
+- A new event driven API
